@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Happy Birthday, Mang! 🎂</title>
-  <meta name="description" content="A special birthday celebration page made with love, just for Mang." />
+  <meta name="description" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -430,6 +430,97 @@
       }
     }
 
+    /* ── MUSIC TOGGLE ── */
+    .music-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 999;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 200, 100, 0.45);
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45), 0 0 14px rgba(255, 180, 80, 0.25);
+      cursor: pointer;
+      font-size: 1.55rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      animation: fadeSlideUp 1s ease 1.5s both;
+    }
+
+    .music-btn:hover {
+      transform: scale(1.12);
+      border-color: rgba(255, 200, 100, 0.8);
+      box-shadow: 0 6px 32px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 180, 80, 0.45);
+    }
+
+    .music-btn.spinning .music-icon {
+      animation: spinNote 3s linear infinite;
+    }
+
+    @keyframes spinNote {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ── MUSIC CALLOUT ── */
+    .music-callout {
+      position: fixed;
+      bottom: 38px;
+      right: 92px;
+      z-index: 998;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      animation: fadeSlideUp 1s ease 2.2s both;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .music-callout.hidden {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+
+    .callout-bubble {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 200, 100, 0.4);
+      border-radius: 20px;
+      padding: 9px 16px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: hsl(38, 95%, 88%);
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 10px rgba(255, 180, 80, 0.2);
+      animation: calloutBounce 1.6s ease-in-out 2.4s infinite;
+    }
+
+    @keyframes calloutBounce {
+      0%, 100% { transform: translateY(0);   }
+      45%       { transform: translateY(-6px); }
+    }
+
+    .callout-arrow {
+      font-size: 1.6rem;
+      line-height: 1;
+      animation: arrowWag 1.2s ease-in-out 2.4s infinite;
+      transform-origin: left center;
+    }
+
+    @keyframes arrowWag {
+      0%, 100% { transform: translateX(0);   }
+      50%       { transform: translateX(5px); }
+    }
+
     @media (max-width: 540px) {
       .message-card {
         padding: 30px 20px;
@@ -443,11 +534,35 @@
       .countdown-wrap {
         padding: 18px 24px;
       }
+
+      .music-btn {
+        bottom: 18px;
+        right: 18px;
+        width: 46px;
+        height: 46px;
+        font-size: 1.3rem;
+      }
     }
   </style>
 </head>
 
 <body>
+
+  <!-- Happy Birthday audio (autoplay) -->
+  <audio id="bday-audio" loop preload="auto">
+    <source src="HAPPY BIRTHDAY TO YOU _ PIANO INSTRUMENTAL _ BEST HAPPY BITHDAY MUSIC 2021.mp3" type="audio/mpeg" />
+  </audio>
+
+  <!-- Music callout tooltip -->
+  <div class="music-callout" id="music-callout" aria-hidden="true">
+    <div class="callout-bubble">Click to play 🎶</div>
+    <div class="callout-arrow">➤</div>
+  </div>
+
+  <!-- Floating music toggle button -->
+  <button class="music-btn spinning" id="music-btn" aria-label="Toggle birthday music" title="Toggle music">
+    <span class="music-icon">🎵</span>
+  </button>
 
   <!-- Ambient orbs -->
   <div class="orb orb-1"></div>
@@ -506,6 +621,57 @@
   </main>
 
   <script>
+    /* ── BIRTHDAY MUSIC ── */
+    (function () {
+      const audio = document.getElementById('bday-audio');
+      const btn   = document.getElementById('music-btn');
+      const icon  = btn.querySelector('.music-icon');
+
+      audio.volume = 0.65;
+      const callout = document.getElementById('music-callout');
+
+      function dismissCallout() {
+        callout.classList.add('hidden');
+      }
+
+      // Attempt autoplay immediately
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise.then(dismissCallout).catch(() => {
+          // Browser blocked autoplay — play on first interaction
+          btn.classList.remove('spinning');
+          icon.textContent = '🔇';
+
+          function unlockAudio() {
+            audio.play().then(() => {
+              btn.classList.add('spinning');
+              icon.textContent = '🎵';
+            }).catch(() => {});
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+          }
+
+          document.addEventListener('click', unlockAudio, { once: true });
+          document.addEventListener('touchstart', unlockAudio, { once: true });
+        });
+      }
+
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        dismissCallout();
+        if (audio.paused) {
+          audio.play();
+          btn.classList.add('spinning');
+          icon.textContent = '🎵';
+        } else {
+          audio.pause();
+          btn.classList.remove('spinning');
+          icon.textContent = '🔇';
+        }
+      });
+    })();
+
     /* ── SPARKLE STARS ── */
     (function () {
       for (let i = 0; i < 65; i++) {
